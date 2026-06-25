@@ -1,0 +1,30 @@
+# deps
+node_modules/
+.pnpm-store/
+
+# next / build
+.next/
+out/
+dist/
+build/
+.turbo/
+.vercel/
+
+# env
+.env
+.env.*
+!.env.example
+
+# test / qa artifacts
+coverage/
+playwright-report/
+test-results/
+.playwright/
+
+# os / editor
+.DS_Store
+*.log
+npm-debug.log*
+pnpm-debug.log*
+.idea/
+.vscode/
