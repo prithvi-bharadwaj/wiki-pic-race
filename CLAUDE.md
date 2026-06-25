@@ -1,3 +1,5 @@
+@AGENTS.md
+
 # Wiki Pic Race
 
 Race across Wikipedia by **pictures, not words**. Design: @GDD.md · v0 spec + acceptance: @SPEC.md · build loop: @LOOP.md
@@ -10,7 +12,7 @@ Race across Wikipedia by **pictures, not words**. Design: @GDD.md · v0 spec + a
 - `pnpm verify` — build + test + e2e (the loop's gate; green = v0 workable)
 
 ## Conventions
-- TS + Next.js App Router + Tailwind + Zod. Immutable data. Files <400 lines, functions <50.
+- Next.js 16 App Router (breaking changes vs older — see @AGENTS.md) + TS + Tailwind v4 + Zod. Immutable data. Files <400 lines, functions <50.
 - MediaWiki/REST only; no API keys. Always send a descriptive User-Agent; cache page nodes.
 - Image resolution order: **REST summary → pageimages → typed placeholder**.
 - Commit format `<type>: <desc>`; one acceptance criterion ≈ one commit.
