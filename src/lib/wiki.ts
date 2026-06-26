@@ -1,8 +1,9 @@
 // Live MediaWiki / REST client for real races. Server-side only (sets a User-Agent).
 // One batched call gets links + thumbnails + descriptions; buildBoard handles diversity;
-// REST summary fills any chosen tile the (free-only) pageimages call left blank (GDD §3a).
+// pickImage resolves each chosen tile REST-first so non-free posters/crests still render (GDD §3a).
 
 import { buildBoard, type Candidate, type Tile } from "./board";
+import { pickImage } from "./image";
 
 const API = "https://en.wikipedia.org/w/api.php";
 const REST = "https://en.wikipedia.org/api/rest_v1/page/summary/";
@@ -29,12 +30,13 @@ type ApiPage = { title: string; index?: number; description?: string; thumbnail?
 type ApiResp = { query?: { pages?: Record<string, ApiPage>; random?: { title: string }[] } };
 
 async function fetchJson(url: string): Promise<unknown> {
-  const res = await fetch(url, { headers: { "Api-User-Agent": UA } });
+  const res = await fetch(url, { headers: { "User-Agent": UA, "Api-User-Agent": UA } });
   if (!res.ok) throw new Error(`wiki ${res.status}`);
   return res.json();
 }
 
-async function restThumb(title: string): Promise<string | null> {
+// REST summary thumbnail for a single title (includes non-free posters/crests). Cached.
+export async function resolveImage(title: string): Promise<string | null> {
   if (imgCache.has(title)) return imgCache.get(title) ?? null;
   try {
     const data = (await fetchJson(REST + encodeURIComponent(title.replace(/ /g, "_")))) as {
@@ -65,7 +67,8 @@ export async function getBoard(title: string): Promise<Board> {
 
   const url = `${API}?action=query&format=json&generator=links&gpllimit=500&gplnamespace=0&prop=pageimages|description&piprop=thumbnail&pithumbsize=200&titles=${encodeURIComponent(title)}`;
   const data = (await fetchJson(url)) as ApiResp;
-  const pages = Object.values(data.query?.pages ?? {});
+  // generator order (link prominence) lives in `index`; Object.values is pageid-keyed, so sort by it
+  const pages = Object.values(data.query?.pages ?? {}).sort((a, b) => (a.index ?? 1e9) - (b.index ?? 1e9));
 
   const candidates: Candidate[] = pages.map((p, i) => ({
     title: p.title,
@@ -77,12 +80,13 @@ export async function getBoard(title: string): Promise<Board> {
 
   const board = buildBoard(candidates, { size: 24, bridgeSlots: 8, pageType });
 
-  // REST fallback for the (bounded) set of chosen tiles still missing an image
+  // Fill any chosen tile lacking a (free) pageimage via the REST summary, then placeholder.
+  // pickImage encodes the resolution order; we only spend REST calls on the blanks.
   const tiles = await Promise.all(
     board.map(async (t) => {
       if (t.image) return t;
-      const url2 = await restThumb(t.title);
-      return url2 ? { ...t, image: url2, imageKey: url2 } : t;
+      const picked = pickImage({ restThumb: await resolveImage(t.title), pageImageThumb: null });
+      return picked.url ? { ...t, image: picked.url, imageKey: picked.url } : t;
     }),
   );
 
