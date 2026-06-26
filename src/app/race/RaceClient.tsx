@@ -20,6 +20,9 @@ export default function RaceClient({ seed, start, target }: Props) {
   const [elapsed, setElapsed] = useState(0);
   const [won, setWon] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [targetImg, setTargetImg] = useState<string | null>(
+    isSeed && targetTitle ? seedImg(targetTitle, 0) : null,
+  );
   const startedAt = useRef<number | null>(null);
 
   // Random race: fetch a start/target pair when none was supplied.
@@ -66,6 +69,24 @@ export default function RaceClient({ seed, start, target }: Props) {
     };
   }, [current, isSeed]);
 
+  // Resolve the target's own image in live mode (seed mode already has one).
+  useEffect(() => {
+    if (isSeed || !targetTitle) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch(`/api/image?title=${encodeURIComponent(targetTitle)}`);
+        const data = (await res.json()) as { url: string | null };
+        if (!cancelled) setTargetImg(data.url);
+      } catch {
+        // header falls back to name-only
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [isSeed, targetTitle]);
+
   // Timer.
   useEffect(() => {
     if (won) return;
@@ -77,12 +98,28 @@ export default function RaceClient({ seed, start, target }: Props) {
   }, [won]);
 
   const move = useCallback(
-    (to: string) => {
+    async (to: string) => {
+      if (!current) return;
+      try {
+        const res = await fetch("/api/move", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ from: current, to, seed }),
+        });
+        if (!res.ok) {
+          setError("That link isn't on this page — pick another picture.");
+          return;
+        }
+      } catch (e) {
+        setError(String(e));
+        return;
+      }
+      setError(null);
       setCurrent(to);
       setHops((h) => h + 1);
       if (to === targetTitle) setWon(true);
     },
-    [targetTitle],
+    [current, targetTitle, seed],
   );
 
   if (won) {
@@ -101,8 +138,6 @@ export default function RaceClient({ seed, start, target }: Props) {
     );
   }
 
-  const targetImage = isSeed && targetTitle ? seedImg(targetTitle, 0) : null;
-
   return (
     <main className="mx-auto flex min-h-screen max-w-5xl flex-col gap-6 p-4 sm:p-8">
       <header className="flex flex-wrap items-center justify-between gap-4 border-b pb-4">
@@ -111,10 +146,10 @@ export default function RaceClient({ seed, start, target }: Props) {
         </Link>
         <div className="flex items-center gap-3">
           <span className="text-sm text-gray-500">Get to</span>
-          {targetImage ? (
+          {targetImg ? (
             <img
               data-testid="target-image"
-              src={targetImage}
+              src={targetImg}
               alt=""
               className="h-10 w-10 rounded object-cover"
             />
