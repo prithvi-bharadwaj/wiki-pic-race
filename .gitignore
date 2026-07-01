@@ -21,6 +21,9 @@ playwright-report/
 test-results/
 .playwright/
 
+# local tooling / session state
+.claude/
+
 # os / editor
 .DS_Store
 *.log
