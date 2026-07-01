@@ -34,11 +34,26 @@ test("seeded race: target, diversity, no blanks, navigation, win (criteria 2-5,7
   );
   expect(imgs.size).toBeGreaterThanOrEqual(8);
 
-  // 4: no blank tiles
-  const blanks = await tiles.evaluateAll(
-    (els) => els.filter((e) => (e as HTMLElement).dataset.blank === "true").length,
-  );
-  expect(blanks).toBe(0);
+  // 4: every tile renders a *loaded* image (portrait or initials avatar) — pictures never blank out
+  const tileImgs = page.locator('[data-testid="tile"] img');
+  expect(await tileImgs.count()).toBe(await tiles.count());
+  await expect
+    .poll(async () =>
+      tileImgs.evaluateAll((els) =>
+        els.every((e) => (e as HTMLImageElement).complete && (e as HTMLImageElement).naturalWidth > 0),
+      ),
+    )
+    .toBe(true);
+
+  // clarity: the current person is anchored, and hovering a face reveals who they are.
+  // Use the last sticker — it has the highest z-index, so no sibling covers its hover target.
+  await expect(page.getByTestId("current-name")).toHaveText(SEED.start);
+  const lastTile = tiles.last();
+  const lastTitle = (await lastTile.getAttribute("data-title")) ?? "";
+  await lastTile.hover();
+  const peek = page.locator(`[data-testid="tile-peek"][data-for="${lastTitle}"]`);
+  await expect(peek).toContainText(lastTitle);
+  await expect(peek).toHaveCSS("opacity", "1");
 
   // 5 + 7: follow the known path to the win screen, hop counter tracking each step
   await expect(page.getByTestId("hops")).toHaveText("0");

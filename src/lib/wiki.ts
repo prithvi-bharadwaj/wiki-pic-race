@@ -9,7 +9,7 @@ const API = "https://en.wikipedia.org/w/api.php";
 const REST = "https://en.wikipedia.org/api/rest_v1/page/summary/";
 const UA = "WikiPicRace/0.1 (https://github.com/prithvi-bharadwaj/wiki-pic-race)";
 
-export type Board = { type: string; tiles: Tile[] };
+export type Board = { type: string; tiles: Tile[]; selfImage: string | null };
 
 const boardCache = new Map<string, Board>();
 const imgCache = new Map<string, string | null>();
@@ -77,6 +77,7 @@ export async function getBoard(title: string): Promise<Board> {
       image: p.thumbnail?.source ?? null,
       imageKey: p.thumbnail?.source ?? p.title,
       type: "person",
+      desc: p.description,
       weight: p.index ?? i,
     }));
 
@@ -91,7 +92,8 @@ export async function getBoard(title: string): Promise<Board> {
     }),
   );
 
-  const result: Board = { type: "person", tiles };
+  const selfImage = await resolveImage(title);
+  const result: Board = { type: "person", tiles, selfImage };
   boardCache.set(title, result);
   return result;
 }

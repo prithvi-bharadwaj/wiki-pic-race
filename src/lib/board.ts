@@ -7,6 +7,7 @@ export type Candidate = {
   image: string | null; // resolved URL (null => placeholder tile)
   imageKey: string; // de-dup key (image filename, or title when imageless)
   type: string; // coarse bucket: film/person/place/sport/org/concept/...
+  desc?: string; // short Wikidata description ("Scottish philosopher") — shown on peek
   weight?: number; // prominence; lower = stronger (e.g. link order / -pageviews)
 };
 

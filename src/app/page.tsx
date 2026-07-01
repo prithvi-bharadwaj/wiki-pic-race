@@ -9,8 +9,15 @@ export default function Home() {
         Hop from <strong className="text-foreground">face to face</strong> across Wikipedia. Start on
         one person, race to another — clicking only portraits, never words. Fewest hops wins.
       </p>
+      <p className="max-w-md text-sm text-muted-foreground">
+        Every face on the board is someone <strong className="text-foreground">linked from</strong>{" "}
+        the person you&rsquo;re on. Hover to see who they are; click to travel to them.
+      </p>
       <div className="flex flex-wrap items-center justify-center gap-4">
-        <Link href="/race?seed=test" className={buttonVariants({ className: "h-11 px-6 text-base" })}>
+        <Link
+          href="/race?start=Shah%20Rukh%20Khan&target=Amitabh%20Bachchan"
+          className={buttonVariants({ className: "h-11 px-6 text-base" })}
+        >
           Play demo race
         </Link>
         <Link

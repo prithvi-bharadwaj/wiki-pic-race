@@ -6,6 +6,7 @@
 // Titles are hidden; hover straightens the sticker and peeks the name.
 
 import type { Tile } from "@/lib/board";
+import { initialsAvatar } from "@/lib/avatar";
 
 // Stable 32-bit hash -> [0,1) pseudo-random, salted so one title yields many independent draws.
 function rnd(str: string, salt: string): number {
@@ -59,20 +60,26 @@ export default function StickerBoard({
               data-type={t.type}
               data-blank={t.image ? "false" : "true"}
               onClick={() => onPick(t.title)}
-              aria-label={t.title}
+              aria-label={t.desc ? `${t.title} — ${t.desc}` : t.title}
               className="h-full w-full cursor-pointer overflow-hidden rounded-full border-4 border-background bg-muted shadow-[0_6px_16px_rgba(0,0,0,0.18)] outline-none ring-ring/50 transition-[transform,box-shadow] duration-200 ease-out group-hover:rotate-0 group-hover:shadow-[0_12px_28px_rgba(0,0,0,0.28)] focus-visible:ring-4"
               style={{ transform: `rotate(${rot}deg)` }}
             >
-              {t.image ? (
-                <img src={t.image} alt="" className="h-full w-full object-cover" draggable={false} />
-              ) : (
-                <span className="flex h-full w-full items-center justify-center p-2 text-center text-xs font-medium text-muted-foreground">
-                  {t.title}
-                </span>
-              )}
+              <img
+                src={t.image ?? initialsAvatar(t.title)}
+                alt=""
+                className="h-full w-full object-cover"
+                draggable={false}
+              />
             </button>
-            <span className="pointer-events-none absolute left-1/2 top-[calc(100%+6px)] -translate-x-1/2 whitespace-nowrap rounded-md bg-foreground px-2 py-0.5 text-xs font-medium text-background opacity-0 shadow transition-opacity duration-150 group-hover:opacity-100">
-              {t.title}
+            <span
+              data-testid="tile-peek"
+              data-for={t.title}
+              className="pointer-events-none absolute left-1/2 top-[calc(100%+6px)] z-[1000] -translate-x-1/2 whitespace-nowrap rounded-md bg-foreground px-2.5 py-1 text-center text-background opacity-0 shadow-lg transition-opacity duration-150 group-hover:opacity-100"
+            >
+              <span className="block text-xs font-semibold">{t.title}</span>
+              {t.desc ? (
+                <span className="block text-[10px] font-normal opacity-80">{t.desc}</span>
+              ) : null}
             </span>
           </div>
         );

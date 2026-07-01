@@ -4,12 +4,13 @@
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { Tile } from "@/lib/board";
-import { SEED, seedImg } from "@/lib/seed";
+import { SEED } from "@/lib/seed";
+import { initialsAvatar } from "@/lib/avatar";
 import { buttonVariants } from "@/components/ui/button";
 import StickerBoard from "./StickerBoard";
 
 type Props = { seed?: string; start?: string; target?: string };
-type Board = { type: string; tiles: Tile[] };
+type Board = { type: string; tiles: Tile[]; selfImage?: string | null };
 
 export default function RaceClient({ seed, start, target }: Props) {
   const isSeed = seed === "test";
@@ -23,7 +24,7 @@ export default function RaceClient({ seed, start, target }: Props) {
   const [won, setWon] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [targetImg, setTargetImg] = useState<string | null>(
-    isSeed && targetTitle ? seedImg(targetTitle, 0) : null,
+    isSeed && targetTitle ? initialsAvatar(targetTitle) : null,
   );
   const startedAt = useRef<number | null>(null);
 
@@ -141,6 +142,8 @@ export default function RaceClient({ seed, start, target }: Props) {
     );
   }
 
+  const currentImg = current ? (board?.selfImage ?? initialsAvatar(current)) : null;
+
   return (
     <main className="mx-auto flex min-h-screen max-w-4xl flex-col gap-5 p-4 sm:p-8">
       <header className="flex flex-wrap items-center justify-between gap-4 border-b pb-4">
@@ -149,10 +152,10 @@ export default function RaceClient({ seed, start, target }: Props) {
         </Link>
         <div className="flex items-center gap-3">
           <span className="text-sm text-muted-foreground">Reach</span>
-          {targetImg ? (
+          {targetTitle ? (
             <img
               data-testid="target-image"
-              src={targetImg}
+              src={targetImg ?? initialsAvatar(targetTitle)}
               alt=""
               className="h-11 w-11 rounded-full border-2 border-background object-cover shadow"
             />
@@ -169,17 +172,32 @@ export default function RaceClient({ seed, start, target }: Props) {
         </div>
       </header>
 
-      <p className="text-sm text-muted-foreground">
-        From <span className="font-medium text-foreground">{startTitle ?? "…"}</span> — click a face to
-        hop. Hover to peek at who it is.
-      </p>
+      <div className="flex flex-col gap-2">
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <span>You&rsquo;re on</span>
+          {currentImg ? (
+            <span className="inline-flex items-center gap-2 rounded-full border bg-card py-1 pl-1 pr-3">
+              <img src={currentImg} alt="" className="h-7 w-7 rounded-full object-cover" />
+              <span data-testid="current-name" className="font-semibold text-foreground">
+                {current}
+              </span>
+            </span>
+          ) : null}
+        </div>
+        <p className="text-sm text-muted-foreground">
+          These are people linked from{" "}
+          <span className="font-medium text-foreground">{current ?? "…"}</span>&rsquo;s Wikipedia
+          article. Hover a face to see who they are, then click to travel — reach{" "}
+          <span className="font-medium text-foreground">{targetTitle ?? "…"}</span>.
+        </p>
+      </div>
 
       {error ? <p className="text-sm text-destructive">{error}</p> : null}
 
       {board ? (
         <StickerBoard tiles={board.tiles} onPick={move} />
       ) : (
-        <p className="text-muted-foreground">Loading…</p>
+        <p className="text-muted-foreground">Finding faces&hellip;</p>
       )}
     </main>
   );
