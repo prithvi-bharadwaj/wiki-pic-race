@@ -5,6 +5,8 @@ import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { Tile } from "@/lib/board";
 import { SEED, seedImg } from "@/lib/seed";
+import { buttonVariants } from "@/components/ui/button";
+import StickerBoard from "./StickerBoard";
 
 type Props = { seed?: string; start?: string; target?: string };
 type Board = { type: string; tiles: Tile[] };
@@ -107,7 +109,7 @@ export default function RaceClient({ seed, start, target }: Props) {
           body: JSON.stringify({ from: current, to, seed }),
         });
         if (!res.ok) {
-          setError("That link isn't on this page — pick another picture.");
+          setError("That face isn't on this page — pick another.");
           return;
         }
       } catch (e) {
@@ -126,12 +128,13 @@ export default function RaceClient({ seed, start, target }: Props) {
     return (
       <main className="mx-auto flex min-h-screen max-w-2xl flex-col items-center justify-center gap-6 p-8 text-center">
         <div data-testid="win" className="flex flex-col items-center gap-4">
-          <h1 className="text-4xl font-bold">You reached {targetTitle}! 🏁</h1>
-          <p className="text-xl">
+          <div className="text-6xl">🏁</div>
+          <h1 className="text-4xl font-bold tracking-tight">You reached {targetTitle}!</h1>
+          <p className="text-xl text-muted-foreground">
             {hops} hops · {elapsed}s
           </p>
         </div>
-        <Link href="/" className="rounded-lg bg-black px-6 py-3 font-semibold text-white">
+        <Link href="/" className={buttonVariants({ className: "h-11 px-6 text-base" })}>
           Play again
         </Link>
       </main>
@@ -139,19 +142,19 @@ export default function RaceClient({ seed, start, target }: Props) {
   }
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-5xl flex-col gap-6 p-4 sm:p-8">
+    <main className="mx-auto flex min-h-screen max-w-4xl flex-col gap-5 p-4 sm:p-8">
       <header className="flex flex-wrap items-center justify-between gap-4 border-b pb-4">
-        <Link href="/" className="text-sm text-gray-400 hover:underline">
+        <Link href="/" className="text-sm text-muted-foreground transition-colors hover:text-foreground">
           ← Wiki Pic Race
         </Link>
         <div className="flex items-center gap-3">
-          <span className="text-sm text-gray-500">Get to</span>
+          <span className="text-sm text-muted-foreground">Reach</span>
           {targetImg ? (
             <img
               data-testid="target-image"
               src={targetImg}
               alt=""
-              className="h-10 w-10 rounded object-cover"
+              className="h-11 w-11 rounded-full border-2 border-background object-cover shadow"
             />
           ) : null}
           <span data-testid="target-name" className="text-lg font-bold">
@@ -160,46 +163,23 @@ export default function RaceClient({ seed, start, target }: Props) {
         </div>
         <div className="flex items-center gap-6 text-sm">
           <span>
-            Hops: <span data-testid="hops" className="font-bold">{hops}</span>
+            Hops: <span data-testid="hops" className="font-bold tabular-nums">{hops}</span>
           </span>
-          <span className="tabular-nums">{elapsed}s</span>
+          <span className="tabular-nums text-muted-foreground">{elapsed}s</span>
         </div>
       </header>
 
-      <p className="text-sm text-gray-400">
-        From <span className="font-medium">{startTitle ?? "…"}</span> — click a picture to hop. Hover
-        to peek at what it is.
+      <p className="text-sm text-muted-foreground">
+        From <span className="font-medium text-foreground">{startTitle ?? "…"}</span> — click a face to
+        hop. Hover to peek at who it is.
       </p>
 
-      {error ? <p className="text-red-500">Error: {error}</p> : null}
+      {error ? <p className="text-sm text-destructive">{error}</p> : null}
 
       {board ? (
-        <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-6">
-          {board.tiles.map((t, i) => (
-            <button
-              key={`${t.title}-${i}`}
-              data-testid="tile"
-              data-title={t.title}
-              data-type={t.type}
-              data-blank={t.image ? "false" : "true"}
-              onClick={() => move(t.title)}
-              className="group relative aspect-square overflow-hidden rounded-lg border bg-gray-100"
-            >
-              {t.image ? (
-                <img src={t.image} alt="" className="h-full w-full object-cover" />
-              ) : (
-                <span className="flex h-full w-full items-center justify-center p-1 text-center text-xs text-gray-600">
-                  {t.title}
-                </span>
-              )}
-              <span className="pointer-events-none absolute inset-x-0 bottom-0 truncate bg-black/70 p-1 text-xs text-white opacity-0 transition group-hover:opacity-100">
-                {t.title}
-              </span>
-            </button>
-          ))}
-        </div>
+        <StickerBoard tiles={board.tiles} onPick={move} />
       ) : (
-        <p className="text-gray-400">Loading…</p>
+        <p className="text-muted-foreground">Loading…</p>
       )}
     </main>
   );

@@ -21,12 +21,12 @@ test("seeded race: target, diversity, no blanks, navigation, win (criteria 2-5,7
   const tiles = page.getByTestId("tile");
   await expect(tiles.first()).toBeVisible();
 
-  // 3: >=12 tiles, >=3 type buckets, >=8 distinct images
+  // 3: >=12 tiles, all people (person-to-person by design), >=8 distinct portraits
   expect(await tiles.count()).toBeGreaterThanOrEqual(12);
   const types = new Set(
     await tiles.evaluateAll((els) => els.map((e) => (e as HTMLElement).dataset.type)),
   );
-  expect(types.size).toBeGreaterThanOrEqual(3);
+  expect([...types]).toEqual(["person"]);
   const imgs = new Set(
     await page
       .locator('[data-testid="tile"] img')
