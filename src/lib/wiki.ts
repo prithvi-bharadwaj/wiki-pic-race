@@ -1,6 +1,6 @@
-// Live MediaWiki / REST client for real races. Server-side only (sets a User-Agent).
-// One batched call gets links + thumbnails + descriptions; buildBoard handles diversity;
-// pickImage resolves each chosen tile REST-first so non-free posters/crests still render (GDD §3a).
+// Live MediaWiki / REST client for people-only races. Server-side only (sets a User-Agent).
+// The game hops person -> person: getBoard keeps only person-typed links, and the random walk
+// uses getPeopleLinks so every step is a person. Images resolve REST-first (cutout portraits).
 
 import { buildBoard, type Candidate, type Tile } from "./board";
 import { pickImage } from "./image";
@@ -14,15 +14,16 @@ export type Board = { type: string; tiles: Tile[] };
 const boardCache = new Map<string, Board>();
 const imgCache = new Map<string, string | null>();
 
+const PERSON = /\bborn\b|\b(actor|actress|singer|songwriter|rapper|musician|composer|conductor|director|producer|filmmaker|screenwriter|writer|author|poet|novelist|playwright|journalist|presenter|host|comedian|model|dancer|painter|artist|sculptor|photographer|architect|politician|president|senator|governor|minister|diplomat|lawyer|judge|activist|businessman|businesswoman|entrepreneur|investor|executive|economist|scientist|physicist|chemist|biologist|mathematician|engineer|inventor|philosopher|historian|professor|footballer|cricketer|basketball|tennis|boxer|wrestler|golfer|swimmer|cyclist|athlete|sprinter|driver|player|coach|chef|astronaut|monarch|king|queen|emperor|prince|princess|pope|saint)\b/;
+
 export function classifyType(desc: string | undefined): string {
   const s = (desc ?? "").toLowerCase();
+  if (PERSON.test(s)) return "person";
   if (s.includes("film")) return "film";
-  if (/(actor|actress|singer|director|cricketer|politician|player|musician|footballer|writer|author|host)/.test(s) || s.includes(" born ")) return "person";
-  if (/(city|capital|state|country|district|town|village|river|island|region|county|mountain)/.test(s)) return "place";
-  if (/(sport|club|team|football|hockey|league|stadium|cricket|tournament)/.test(s)) return "sport";
-  if (s.includes("award")) return "award";
+  if (/(city|capital|state|country|district|town|village|river|island|region)/.test(s)) return "place";
+  if (/(sport|club|team|league|stadium|tournament)/.test(s)) return "sport";
   if (/(song|album|soundtrack)/.test(s)) return "music";
-  if (/(company|organization|organisation|university|channel|network|studio|institute|agency)/.test(s)) return "org";
+  if (/(company|organization|organisation|university|channel|network|studio|institute)/.test(s)) return "org";
   return "other";
 }
 
@@ -35,7 +36,7 @@ async function fetchJson(url: string): Promise<unknown> {
   return res.json();
 }
 
-// REST summary thumbnail for a single title (includes non-free posters/crests). Cached.
+// REST summary thumbnail for a single title (includes non-free images). Cached.
 export async function resolveImage(title: string): Promise<string | null> {
   if (imgCache.has(title)) return imgCache.get(title) ?? null;
   try {
@@ -51,37 +52,37 @@ export async function resolveImage(title: string): Promise<string | null> {
   }
 }
 
-export async function getLinks(title: string): Promise<string[]> {
-  const url = `${API}?action=query&format=json&generator=links&gpllimit=500&gplnamespace=0&prop=info&titles=${encodeURIComponent(title)}`;
+// Titles of the people linked from a page (for the person->person walk + move validation).
+export async function getPeopleLinks(title: string): Promise<string[]> {
+  const url = `${API}?action=query&format=json&generator=links&gpllimit=500&gplnamespace=0&prop=description&titles=${encodeURIComponent(title)}`;
   const data = (await fetchJson(url)) as ApiResp;
-  return Object.values(data.query?.pages ?? {}).map((p) => p.title);
+  return Object.values(data.query?.pages ?? {})
+    .filter((p) => classifyType(p.description) === "person")
+    .map((p) => p.title);
 }
 
 export async function getBoard(title: string): Promise<Board> {
   const cached = boardCache.get(title);
   if (cached) return cached;
 
-  const selfUrl = `${API}?action=query&format=json&prop=description&titles=${encodeURIComponent(title)}`;
-  const selfData = (await fetchJson(selfUrl)) as ApiResp;
-  const pageType = classifyType(Object.values(selfData.query?.pages ?? {})[0]?.description);
-
-  const url = `${API}?action=query&format=json&generator=links&gpllimit=500&gplnamespace=0&prop=pageimages|description&piprop=thumbnail&pithumbsize=200&titles=${encodeURIComponent(title)}`;
+  const url = `${API}?action=query&format=json&generator=links&gpllimit=500&gplnamespace=0&prop=pageimages|description&piprop=thumbnail&pithumbsize=240&titles=${encodeURIComponent(title)}`;
   const data = (await fetchJson(url)) as ApiResp;
-  // generator order (link prominence) lives in `index`; Object.values is pageid-keyed, so sort by it
   const pages = Object.values(data.query?.pages ?? {}).sort((a, b) => (a.index ?? 1e9) - (b.index ?? 1e9));
 
-  const candidates: Candidate[] = pages.map((p, i) => ({
-    title: p.title,
-    image: p.thumbnail?.source ?? null,
-    imageKey: p.thumbnail?.source ?? p.title,
-    type: classifyType(p.description),
-    weight: p.index ?? i,
-  }));
+  // people only
+  const candidates: Candidate[] = pages
+    .filter((p) => classifyType(p.description) === "person")
+    .map((p, i) => ({
+      title: p.title,
+      image: p.thumbnail?.source ?? null,
+      imageKey: p.thumbnail?.source ?? p.title,
+      type: "person",
+      weight: p.index ?? i,
+    }));
 
-  const board = buildBoard(candidates, { size: 24, bridgeSlots: 8, pageType });
+  const board = buildBoard(candidates, { size: 16, bridgeSlots: 0 });
 
-  // Fill any chosen tile lacking a (free) pageimage via the REST summary, then placeholder.
-  // pickImage encodes the resolution order; we only spend REST calls on the blanks.
+  // resolve each chosen sticker's portrait (REST -> pageimage -> placeholder); only spend REST on blanks
   const tiles = await Promise.all(
     board.map(async (t) => {
       if (t.image) return t;
@@ -90,13 +91,19 @@ export async function getBoard(title: string): Promise<Board> {
     }),
   );
 
-  const result: Board = { type: pageType, tiles };
+  const result: Board = { type: "person", tiles };
   boardCache.set(title, result);
   return result;
 }
 
-export async function getRandom(count: number): Promise<string[]> {
-  const url = `${API}?action=query&format=json&list=random&rnnamespace=0&rnlimit=${count}`;
-  const data = (await fetchJson(url)) as ApiResp;
-  return (data.query?.random ?? []).map((r) => r.title);
+// A pool of well-known people (rich person-links + good portraits) to seed random races from.
+const RANDOM_PEOPLE = [
+  "Shah Rukh Khan", "Amitabh Bachchan", "Aamir Khan", "Priyanka Chopra", "Leonardo DiCaprio",
+  "Tom Cruise", "Meryl Streep", "Barack Obama", "Taylor Swift", "Cristiano Ronaldo",
+  "Lionel Messi", "Oprah Winfrey", "Albert Einstein", "Madonna", "Beyoncé",
+  "Brad Pitt", "Angelina Jolie", "Robert De Niro", "Scarlett Johansson", "Tom Hanks",
+];
+
+export function randomPerson(): string {
+  return RANDOM_PEOPLE[Math.floor(Math.random() * RANDOM_PEOPLE.length)];
 }

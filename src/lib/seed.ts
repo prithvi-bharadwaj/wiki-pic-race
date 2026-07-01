@@ -1,86 +1,59 @@
-// Hermetic fixture for the deterministic demo/test race (`?seed=test`). No network — the
-// e2e acceptance check drives this so it is fast, offline, and stable. Theme: the SRK example
-// from the GDD — Shah Rukh Khan -> Chak De! India (his hockey film) -> Field hockey.
+// Hermetic fixture for the deterministic demo/test race (`?seed=test`). People only —
+// Shah Rukh Khan -> Kajol -> Amitabh Bachchan. Placeholder portraits are circular initial
+// "stickers"; the live game uses real Wikipedia portraits.
 
 import type { Tile } from "./board";
 
 export function seedImg(label: string, hue = 210): string {
+  const initials = label
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((w) => w[0] ?? "")
+    .join("")
+    .toUpperCase();
   const svg =
-    `<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'>` +
-    `<rect width='100%' height='100%' fill='hsl(${hue},65%,52%)'/>` +
-    `<text x='50%' y='52%' font-family='sans-serif' font-size='13' fill='white' ` +
-    `text-anchor='middle' dominant-baseline='middle'>${label.slice(0, 16)}</text></svg>`;
+    `<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'>` +
+    `<circle cx='100' cy='100' r='100' fill='hsl(${hue},58%,55%)'/>` +
+    `<text x='100' y='118' font-family='sans-serif' font-size='64' font-weight='700' ` +
+    `fill='white' text-anchor='middle'>${initials}</text></svg>`;
   return `data:image/svg+xml,${encodeURIComponent(svg)}`;
 }
 
-type Spec = readonly [title: string, type: string];
+export type SeedPage = { type: string; tiles: Tile[] };
 
-function makeTiles(specs: readonly Spec[]): Tile[] {
-  return specs.map(([title, type], i) => ({
+function makeTiles(titles: readonly string[]): Tile[] {
+  return titles.map((title, i) => ({
     title,
-    type,
-    image: seedImg(title, (i * 53 + 17) % 360),
+    type: "person",
+    image: seedImg(title, (i * 47 + 11) % 360),
     imageKey: title,
     bridge: false,
   }));
 }
 
-export type SeedPage = { type: string; tiles: Tile[] };
-
 const PAGES: Record<string, SeedPage> = {
   "Shah Rukh Khan": {
     type: "person",
     tiles: makeTiles([
-      ["Chak De! India", "film"],
-      ["Dilwale Dulhania Le Jayenge", "film"],
-      ["My Name Is Khan", "film"],
-      ["Don", "film"],
-      ["Kajol", "person"],
-      ["Aamir Khan", "person"],
-      ["Gauri Khan", "person"],
-      ["Mumbai", "place"],
-      ["Delhi", "place"],
-      ["Kolkata", "place"],
-      ["Cricket", "sport"],
-      ["Kabaddi", "sport"],
-      ["Kolkata Knight Riders", "org"],
-      ["Red Chillies Entertainment", "org"],
+      "Kajol", "Aamir Khan", "Salman Khan", "Gauri Khan", "Karan Johar", "Juhi Chawla",
+      "Rani Mukerji", "Deepika Padukone", "Priyanka Chopra", "Kareena Kapoor", "Akshay Kumar",
+      "Hrithik Roshan", "Madhuri Dixit", "Anushka Sharma",
     ]),
   },
-  "Chak De! India": {
-    type: "film",
+  Kajol: {
+    type: "person",
     tiles: makeTiles([
-      ["Field hockey", "sport"],
-      ["Hockey", "sport"],
-      ["India national field hockey team", "org"],
-      ["Shah Rukh Khan", "person"],
-      ["Shimit Amin", "person"],
-      ["Vidya Malvade", "person"],
-      ["Delhi", "place"],
-      ["Haryana", "place"],
-      ["Australia", "place"],
-      ["Lagaan", "film"],
-      ["Bend It Like Beckham", "film"],
-      ["Yash Raj Films", "org"],
-      ["2002 Commonwealth Games", "event"],
-      ["Cricket", "sport"],
+      "Amitabh Bachchan", "Ajay Devgn", "Tanuja", "Rani Mukerji", "Kareena Kapoor", "Aamir Khan",
+      "Karan Johar", "Saif Ali Khan", "Jaya Bachchan", "Abhishek Bachchan", "Aishwarya Rai",
+      "Shah Rukh Khan", "Twinkle Khanna", "Sridevi",
     ]),
   },
-  "Field hockey": {
-    type: "sport",
+  "Amitabh Bachchan": {
+    type: "person",
     tiles: makeTiles([
-      ["Hockey", "sport"],
-      ["Olympic sports", "sport"],
-      ["India", "place"],
-      ["Netherlands", "place"],
-      ["Ball", "other"],
-      ["Stick", "other"],
-      ["Goalkeeper", "person"],
-      ["Pakistan", "place"],
-      ["Australia", "place"],
-      ["Dribbling", "other"],
-      ["Penalty corner", "other"],
-      ["Astroturf", "other"],
+      "Jaya Bachchan", "Abhishek Bachchan", "Aishwarya Rai", "Rekha", "Dharmendra", "Hema Malini",
+      "Rishi Kapoor", "Shashi Kapoor", "Dilip Kumar", "Vinod Khanna", "Shah Rukh Khan",
+      "Aamir Khan", "Salman Khan", "Govinda",
     ]),
   },
 };
@@ -94,8 +67,8 @@ export type Seed = {
 
 export const SEED: Seed = {
   start: "Shah Rukh Khan",
-  target: "Field hockey",
-  path: ["Shah Rukh Khan", "Chak De! India", "Field hockey"],
+  target: "Amitabh Bachchan",
+  path: ["Shah Rukh Khan", "Kajol", "Amitabh Bachchan"],
   pages: PAGES,
 };
 

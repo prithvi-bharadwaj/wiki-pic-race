@@ -1,5 +1,5 @@
 import { seedNeighbors } from "@/lib/seed";
-import { getLinks } from "@/lib/wiki";
+import { getPeopleLinks } from "@/lib/wiki";
 
 type Body = { from?: string; to?: string; seed?: string };
 
@@ -17,7 +17,7 @@ export async function POST(request: Request) {
   const legal =
     seed === "test"
       ? seedNeighbors(from).includes(to)
-      : (await getLinks(from)).includes(to);
+      : (await getPeopleLinks(from)).includes(to);
 
   return Response.json({ ok: legal }, { status: legal ? 200 : 400 });
 }
